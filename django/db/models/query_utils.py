@@ -5,6 +5,7 @@ Factored out from django.db.models.query to avoid making the main module very
 large and/or so that they can be used by other modules without getting into
 circular import difficulties.
 """
+
 import functools
 import inspect
 import logging
@@ -198,6 +199,10 @@ class DeferredAttribute:
             # might be able to reuse the already loaded value. Refs #18343.
             val = self._check_parent_chain(instance)
             if val is None:
+                if instance.pk is None and self.field.generated:
+                    raise AttributeError(
+                        "Cannot read a generated field from an unsaved model."
+                    )
                 instance.refresh_from_db(fields=[field_name])
             else:
                 data[field_name] = val
@@ -398,8 +403,8 @@ def check_rel_lookup_compatibility(model, target_opts, field):
     def check(opts):
         return (
             model._meta.concrete_model == opts.concrete_model
-            or opts.concrete_model in model._meta.get_parent_list()
-            or model in opts.get_parent_list()
+            or opts.concrete_model in model._meta.all_parents
+            or model in opts.all_parents
         )
 
     # If the field is a primary key, then doing a query against the field's

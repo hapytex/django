@@ -374,14 +374,14 @@ is where you define your own validation that works at the formset level:
     ...         if any(self.errors):
     ...             # Don't bother validating the formset unless each form is valid on its own
     ...             return
-    ...         titles = []
+    ...         titles = set()
     ...         for form in self.forms:
     ...             if self.can_delete and self._should_delete_form(form):
     ...                 continue
     ...             title = form.cleaned_data.get("title")
     ...             if title in titles:
     ...                 raise ValidationError("Articles in a set must have distinct titles.")
-    ...             titles.append(title)
+    ...             titles.add(title)
     ...
 
     >>> ArticleFormSet = formset_factory(ArticleForm, formset=BaseArticleFormSet)
@@ -432,16 +432,18 @@ If ``validate_max=True`` is passed to
 that the number of forms in the data set, minus those marked for
 deletion, is less than or equal to ``max_num``.
 
+.. code-block:: pycon
+
     >>> from django.forms import formset_factory
     >>> from myapp.forms import ArticleForm
     >>> ArticleFormSet = formset_factory(ArticleForm, max_num=1, validate_max=True)
     >>> data = {
-    ...     'form-TOTAL_FORMS': '2',
-    ...     'form-INITIAL_FORMS': '0',
-    ...     'form-0-title': 'Test',
-    ...     'form-0-pub_date': '1904-06-16',
-    ...     'form-1-title': 'Test 2',
-    ...     'form-1-pub_date': '1912-06-23',
+    ...     "form-TOTAL_FORMS": "2",
+    ...     "form-INITIAL_FORMS": "0",
+    ...     "form-0-title": "Test",
+    ...     "form-0-pub_date": "1904-06-16",
+    ...     "form-1-title": "Test 2",
+    ...     "form-1-pub_date": "1912-06-23",
     ... }
     >>> formset = ArticleFormSet(data)
     >>> formset.is_valid()
@@ -475,16 +477,18 @@ If ``validate_min=True`` is passed to
 that the number of forms in the data set, minus those marked for
 deletion, is greater than or equal to ``min_num``.
 
+.. code-block:: pycon
+
     >>> from django.forms import formset_factory
     >>> from myapp.forms import ArticleForm
     >>> ArticleFormSet = formset_factory(ArticleForm, min_num=3, validate_min=True)
     >>> data = {
-    ...     'form-TOTAL_FORMS': '2',
-    ...     'form-INITIAL_FORMS': '0',
-    ...     'form-0-title': 'Test',
-    ...     'form-0-pub_date': '1904-06-16',
-    ...     'form-1-title': 'Test 2',
-    ...     'form-1-pub_date': '1912-06-23',
+    ...     "form-TOTAL_FORMS": "2",
+    ...     "form-INITIAL_FORMS": "0",
+    ...     "form-0-title": "Test",
+    ...     "form-0-pub_date": "1904-06-16",
+    ...     "form-1-title": "Test 2",
+    ...     "form-1-pub_date": "1912-06-23",
     ... }
     >>> formset = ArticleFormSet(data)
     >>> formset.is_valid()

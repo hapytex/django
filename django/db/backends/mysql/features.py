@@ -6,7 +6,6 @@ from django.utils.functional import cached_property
 
 class DatabaseFeatures(BaseDatabaseFeatures):
     empty_fetchmany_value = ()
-    allows_group_by_selected_pks = True
     related_fields_match_type = True
     # MySQL doesn't support sliced subqueries with IN/ALL/ANY/SOME.
     allow_sliced_subqueries_with_in = False
@@ -60,10 +59,13 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     order_by_nulls_first = True
     supports_logical_xor = True
 
+    supports_stored_generated_columns = True
+    supports_virtual_generated_columns = True
+
     @cached_property
     def minimum_database_version(self):
         if self.connection.mysql_is_mariadb:
-            return (10, 4)
+            return (10, 5)
         else:
             return (8, 0, 11)
 
@@ -83,6 +85,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
             "ci": f"{charset}_general_ci",
             "non_default": f"{charset}_esperanto_ci",
             "swedish_ci": f"{charset}_swedish_ci",
+            "virtual": f"{charset}_esperanto_ci",
         }
 
     test_now_utc_template = "UTC_TIMESTAMP(6)"
@@ -117,28 +120,13 @@ class DatabaseFeatures(BaseDatabaseFeatures):
             },
         }
         if self.connection.mysql_is_mariadb and (
-            10,
-            4,
-            3,
-        ) < self.connection.mysql_version < (10, 5, 2):
+            self.connection.mysql_version < (10, 5, 2)
+        ):
             skips.update(
                 {
                     "https://jira.mariadb.org/browse/MDEV-19598": {
                         "schema.tests.SchemaTests."
                         "test_alter_not_unique_field_to_primary_key",
-                    },
-                }
-            )
-        if self.connection.mysql_is_mariadb and (
-            10,
-            4,
-            12,
-        ) < self.connection.mysql_version < (10, 5):
-            skips.update(
-                {
-                    "https://jira.mariadb.org/browse/MDEV-22775": {
-                        "schema.tests.SchemaTests."
-                        "test_alter_pk_with_self_referential_field",
                     },
                 }
             )
@@ -206,11 +194,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
 
     @cached_property
     def can_return_columns_from_insert(self):
-        return self.connection.mysql_is_mariadb and self.connection.mysql_version >= (
-            10,
-            5,
-            0,
-        )
+        return self.connection.mysql_is_mariadb
 
     can_return_rows_from_bulk_insert = property(
         operator.attrgetter("can_return_columns_from_insert")
@@ -334,3 +318,9 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     def has_native_uuid_field(self):
         is_mariadb = self.connection.mysql_is_mariadb
         return is_mariadb and self.connection.mysql_version >= (10, 7)
+
+    @cached_property
+    def allows_group_by_selected_pks(self):
+        if self.connection.mysql_is_mariadb:
+            return "ONLY_FULL_GROUP_BY" not in self.connection.sql_mode
+        return True

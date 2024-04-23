@@ -159,11 +159,6 @@ to, or in lieu of custom ``field.clean()`` methods.
         validation, so you'd need to add them to the ``allowlist`` as
         necessary.
 
-    .. versionchanged:: 3.2.20
-
-        In older versions, values longer than 320 characters could be
-        considered valid.
-
 ``URLValidator``
 ----------------
 
@@ -188,17 +183,16 @@ to, or in lieu of custom ``field.clean()`` methods.
 
         .. _valid URI schemes: https://www.iana.org/assignments/uri-schemes/uri-schemes.xhtml
 
-    .. attribute:: max_length
+        .. warning::
 
-        .. versionadded:: 3.2.20
+            Values starting with ``file:///`` will not pass validation even
+            when the ``file`` scheme is provided. Valid values must contain a
+            host.
+
+    .. attribute:: max_length
 
         The maximum length of values that could be considered valid. Defaults
         to 2048 characters.
-
-    .. versionchanged:: 3.2.20
-
-        In older versions, values longer than 2048 characters could be
-        considered valid.
 
 ``validate_email``
 ------------------

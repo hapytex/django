@@ -7,6 +7,7 @@ from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlsplit
 from django.conf import settings
 from django.core import signing
 from django.core.exceptions import (
+    BadRequest,
     DisallowedHost,
     ImproperlyConfigured,
     RequestDataTooBig,
@@ -169,9 +170,11 @@ class HttpRequest:
         return "%s%s%s" % (
             escape_uri_path(path),
             "/" if force_append_slash and not path.endswith("/") else "",
-            ("?" + iri_to_uri(self.META.get("QUERY_STRING", "")))
-            if self.META.get("QUERY_STRING", "")
-            else "",
+            (
+                ("?" + iri_to_uri(self.META.get("QUERY_STRING", "")))
+                if self.META.get("QUERY_STRING", "")
+                else ""
+            ),
         )
 
     def get_signed_cookie(self, key, default=RAISE_ERROR, salt="", max_age=None):
@@ -377,10 +380,16 @@ class HttpRequest:
                 self._mark_post_parse_error()
                 raise
         elif self.content_type == "application/x-www-form-urlencoded":
-            self._post, self._files = (
-                QueryDict(self.body, encoding=self._encoding),
-                MultiValueDict(),
-            )
+            # According to RFC 1866, the "application/x-www-form-urlencoded"
+            # content type does not have a charset and should be always treated
+            # as UTF-8.
+            if self._encoding is not None and self._encoding.lower() != "utf-8":
+                raise BadRequest(
+                    "HTTP requests with the 'application/x-www-form-urlencoded' "
+                    "content type must be UTF-8 encoded."
+                )
+            self._post = QueryDict(self.body, encoding="utf-8")
+            self._files = MultiValueDict()
         else:
             self._post, self._files = (
                 QueryDict(encoding=self._encoding),
